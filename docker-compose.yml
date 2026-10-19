@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  # ============================================================================
+  # Redis Stack: In-Memory Database with RediSearch Vector Similarity Engine
+  # ============================================================================
+  redis:
+    image: redis/redis-stack:latest
+    container_name: tokenops-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"   # Redis server
+      - "8001:8001"   # RedisInsight Web GUI Dashboard
+    environment:
+      - REDIS_ARGS=--save 60 1000 --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tokenops-net
+
+  # ============================================================================
+  # TokenOps Gateway: Enterprise Semantic Caching & Model-Tiering Service
+  # ============================================================================
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tokenops-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - REDIS_INDEX_NAME=idx:llm_semantic_cache
+      - REDIS_PREFIX=cache:llm:
+      - VECTOR_DIMENSION=1536
+      - SIMILARITY_THRESHOLD=0.88
+      - CACHE_TTL_SECONDS=86400
+      - CACHE_ENABLED=true
+      - EMBEDDING_PROVIDER=deterministic
+      - EMBEDDING_MODEL=text-embedding-3-small
+      - ROUTING_ENABLED=true
+      - DEFAULT_BASELINE_MODEL=gpt-4o
+      - TIER_1_MODEL=gpt-4o-mini
+      - TIER_2_MODEL=gpt-4o
+      - TIER_3_MODEL=o1-mini
+      - UPSTREAM_PROVIDER=mock
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - tokenops-net
+
+networks:
+  tokenops-net:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

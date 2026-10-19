@@ -1,0 +1,37 @@
+services:
+  # ── TokenOps Gateway Web Service ──────────────────────────────────────────
+  - type: web
+    name: kilo-tokenops-gateway
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: kilo-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SIMILARITY_THRESHOLD
+        value: "0.88"
+      - key: CACHE_TTL_SECONDS
+        value: "86400"
+      - key: LOG_LEVEL
+        value: INFO
+
+  # ── Managed Redis Instance for Vector Search ──────────────────────────────
+  - type: redis
+    name: kilo-redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # internal private network only

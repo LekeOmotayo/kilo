@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokenOps &amp; Semantic Cache Gateway</title>
+  <meta name="description" content="Enterprise LLM Semantic Caching & TokenOps Gateway - Real-time vector search, dynamic model tiering, and token observability.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-mark">
+        <span class="pulse-ring"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="logo-title">TokenOps Gateway</h1>
+        <span class="logo-subtitle">Enterprise LLM Semantic Caching &amp; Model Tiering</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-indicator" id="system-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Vector Store: Online</span>
+      </div>
+      <a href="/docs" target="_blank" class="nav-btn">API Docs (Swagger)</a>
+      <a href="/metrics" target="_blank" class="nav-btn">/metrics</a>
+      <button id="btn-refresh-stats" class="icon-btn" title="Refresh Live Statistics">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    <!-- Top KPI Cards Ribbon -->
+    <section class="kpi-grid">
+      <!-- KPI 1: Cache Hit Ratio -->
+      <div class="kpi-card" id="card-hit-ratio">
+        <div class="kpi-header">
+          <span class="kpi-label">Cache Hit Ratio</span>
+          <span class="kpi-icon hit-icon">🎯</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value" id="kpi-hit-ratio">0.0%</div>
+          <div class="kpi-subtext"><span id="kpi-hits-count">0</span> hits / <span id="kpi-total-reqs">0</span> requests</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="hit-ratio-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- KPI 2: Total Cost Saved -->
+      <div class="kpi-card highlight-green" id="card-cost-saved">
+        <div class="kpi-header">
+          <span class="kpi-label">Cost Savings</span>
+          <span class="kpi-icon money-icon">💰</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value text-green" id="kpi-cost-saved">$0.0000</div>
+          <div class="kpi-subtext">Total Spent: <span id="kpi-cost-spent">$0.0000</span> (<span id="kpi-savings-pct">0.0%</span> saved)</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill fill-green" id="savings-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Tokens Saved -->
+      <div class="kpi-card" id="card-tokens-saved">
+        <div class="kpi-header">
+          <span class="kpi-label">Tokens Saved by Cache</span>
+          <span class="kpi-icon token-icon">⚡</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value" id="kpi-tokens-saved">0</div>
+          <div class="kpi-subtext">Total Processed: <span id="kpi-tokens-total">0</span> tokens</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill fill-blue" id="tokens-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- KPI 4: Tier Distribution -->
+      <div class="kpi-card" id="card-tier-dist">
+        <div class="kpi-header">
+          <span class="kpi-label">Model Tier Distribution</span>
+          <span class="kpi-icon tier-icon">🔀</span>
+        </div>
+        <div class="tier-bars">
+          <div class="tier-row">
+            <span class="tier-name">T1 (Fast/Cheap)</span>
+            <span class="tier-count" id="count-tier-1">0</span>
+          </div>
+          <div class="tier-row">
+            <span class="tier-name">T2 (Standard)</span>
+            <span class="tier-count" id="count-tier-2">0</span>
+          </div>
+          <div class="tier-row">
+            <span class="tier-name">T3 (Reasoning)</span>
+            <span class="tier-count" id="count-tier-3">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main 2-Column Split Workspace -->
+    <div class="workspace-grid">
+      <!-- Left Column: Interactive Console -->
+      <div class="panel console-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-icon">💻</span>
+            <h2 class="panel-title">Interactive Gateway Console</h2>
+          </div>
+          <div class="sample-pills">
+            <span class="sample-label">Try Preset:</span>
+            <button class="pill-btn" data-preset="simple">Simple Q&amp;A</button>
+            <button class="pill-btn" data-preset="code">Code Debug</button>
+            <button class="pill-btn" data-preset="reasoning">Math Reasoning</button>
+          </div>
+        </div>
+
+        <form id="chat-form" class="console-form">
+          <div class="form-group">
+            <label for="prompt-input" class="form-label">Inbound User Prompt</label>
+            <textarea id="prompt-input" class="prompt-textarea" rows="4" placeholder="Enter prompt or conversation message to test semantic caching and model routing..." required></textarea>
+          </div>
+
+          <!-- Controls Bar -->
+          <div class="controls-bar">
+            <!-- Mode / Tier Selection -->
+            <div class="control-item">
+              <label for="tier-select" class="control-label">Routing Policy</label>
+              <select id="tier-select" class="custom-select">
+                <option value="auto">Auto Router (Dynamic Complexity &amp; Tokens)</option>
+                <option value="1">Force Tier 1 (gpt-4o-mini)</option>
+                <option value="2">Force Tier 2 (gpt-4o)</option>
+                <option value="3">Force Tier 3 (o1-mini)</option>
+              </select>
+            </div>
+
+            <!-- Similarity Threshold Slider -->
+            <div class="control-item">
+              <div class="control-label-row">
+                <label for="threshold-slider" class="control-label">Cosine Threshold</label>
+                <span id="threshold-val" class="slider-badge">0.88</span>
+              </div>
+              <input type="range" id="threshold-slider" min="0.50" max="0.99" step="0.01" value="0.88" class="custom-slider">
+            </div>
+
+            <!-- Bypass Cache Toggle -->
+            <div class="control-item toggle-item">
+              <label class="toggle-switch">
+                <input type="checkbox" id="bypass-cache-toggle">
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label">Bypass Cache</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="submit-bar">
+            <button type="submit" id="btn-submit" class="primary-btn">
+              <span class="btn-text">Send Request</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Live Telemetry Banner (Dynamically injected upon response) -->
+        <div id="telemetry-banner" class="telemetry-banner hidden">
+          <div class="banner-badge-group">
+            <span id="badge-cache-status" class="badge">CACHE STATUS</span>
+            <span id="badge-similarity" class="badge badge-outline hidden">Sim: 0.0000</span>
+            <span id="badge-model" class="badge badge-purple">Model: --</span>
+            <span id="badge-tier" class="badge badge-cyan">Tier: --</span>
+          </div>
+          <div class="banner-metrics">
+            <span class="metric-pill">Latency: <strong id="val-latency">0 ms</strong></span>
+            <span class="metric-pill">Saved: <strong id="val-saved-usd" class="text-green">$0.0000</strong></span>
+            <span class="metric-pill trace-pill" id="val-trace-id" title="Click to copy Trace ID">Trace: --</span>
+          </div>
+        </div>
+
+        <!-- Latency Stage Breakdown Gauge -->
+        <div id="latency-stages" class="latency-stages hidden">
+          <div class="stage-bar">
+            <span class="stage-label">Embedding: <span id="time-embed">0</span>ms</span>
+            <span class="stage-label">Cache Lookup: <span id="time-cache">0</span>ms</span>
+            <span class="stage-label">Upstream LLM: <span id="time-llm">0</span>ms</span>
+            <span class="stage-label">Total Gateway: <span id="time-total">0</span>ms</span>
+          </div>
+        </div>
+
+        <!-- Response Content Box -->
+        <div class="response-container">
+          <div class="response-header">
+            <span class="response-label">LLM Completion Content</span>
+            <button id="btn-copy-response" class="copy-btn">Copy Text</button>
+          </div>
+          <div id="response-output" class="response-output empty-state">
+            Awaiting prompt execution. Submit a query above to test semantic caching and view latency/cost savings.
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Semantic Cache Inspector & Audit Stream -->
+      <div class="panel sidebar-panel">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-cache">Semantic Cache</button>
+          <button class="tab-btn" data-tab="tab-inspect">Vector Inspector</button>
+          <button class="tab-btn" data-tab="tab-pricing">Model Pricing</button>
+        </div>
+
+        <!-- Tab 1: Semantic Cache Admin -->
+        <div id="tab-cache" class="tab-content active">
+          <div class="cache-actions-bar">
+            <div class="cache-doc-count">
+              Cached Prompts: <strong id="cache-docs-count">0</strong>
+            </div>
+            <button id="btn-purge-cache" class="danger-btn">Purge Cache</button>
+          </div>
+          <div class="cache-explanation">
+            <p><strong>How Semantic Caching works:</strong> Inbound prompts are hashed into 1536-D vectors. Redis Vector Search computes the cosine distance against cached embeddings. When similarity &ge; threshold, the upstream call is bypassed completely.</p>
+          </div>
+          <div class="audit-stream-header">Recent Gateway Transactions</div>
+          <div id="audit-log-list" class="audit-log-list">
+            <div class="audit-empty">No recent transactions recorded.</div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Vector Inspector -->
+        <div id="tab-inspect" class="tab-content">
+          <div class="inspect-desc">
+            Test cosine proximity between any prompt and stored vectors in the Redis index:
+          </div>
+          <div class="inspect-form">
+            <input type="text" id="inspect-input" class="inspect-input" placeholder="Type query to find nearest neighbor vectors...">
+            <button id="btn-run-inspect" class="secondary-btn">Inspect</button>
+          </div>
+          <div id="inspect-results" class="inspect-results">
+            <div class="audit-empty">Run an inspection to view top-K vector matches and distances.</div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Model Pricing Table -->
+        <div id="tab-pricing" class="tab-content">
+          <div class="pricing-table-container">
+            <table class="pricing-table">
+              <thead>
+                <tr>
+                  <th>Tier</th>
+                  <th>Model</th>
+                  <th>Input / 1M</th>
+                  <th>Output / 1M</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-cyan">Tier 1</span></td>
+                  <td>gpt-4o-mini</td>
+                  <td>$0.15</td>
+                  <td>$0.60</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">Tier 2</span></td>
+                  <td>gpt-4o</td>
+                  <td>$2.50</td>
+                  <td>$10.00</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-orange">Tier 3</span></td>
+                  <td>o1-mini</td>
+                  <td>$3.00</td>
+                  <td>$12.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pricing-note">
+            * Baseline comparison model: <strong>gpt-4o</strong>. Every Tier 1 routing decision delivers up to 94% cost reduction relative to baseline.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
