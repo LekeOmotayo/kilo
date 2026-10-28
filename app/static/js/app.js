@@ -1,6 +1,7 @@
 /* ==============================================================================
    TokenOps Gateway - Interactive Client Application Logic
    ============================================================================== */
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
@@ -127,8 +128,8 @@ document.addEventListener("DOMContentLoaded", () => {
   async function refreshStats() {
     try {
       const [sumRes, cacheRes] = await Promise.all([
-        fetch("/v1/tokenops/summary"),
-        fetch("/v1/cache/stats"),
+        fetch(`${API_BASE}/v1/tokenops/summary`),
+        fetch(`${API_BASE}/v1/cache/stats`),
       ]);
 
       if (sumRes.ok && cacheRes.ok) {
@@ -227,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
-      const res = await fetch("/v1/chat/completions", {
+      const res = await fetch(`${API_BASE}/v1/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -302,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!confirm("Are you sure you want to purge all semantic cache vectors from Redis?")) return;
 
     try {
-      const res = await fetch("/v1/cache/purge", { method: "POST" });
+      const res = await fetch(`${API_BASE}/v1/cache/purge`, { method: "POST" });
       const data = await res.json();
       showToast(`Cache purged: ${data.purged_keys} keys removed.`);
       await refreshStats();
@@ -319,7 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inspectResults.innerHTML = "<div class='audit-empty'>Searching nearest vector neighbors...</div>";
 
     try {
-      const res = await fetch("/v1/cache/inspect", {
+      const res = await fetch(`${API_BASE}/v1/cache/inspect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: q, top_k: 4 }),
