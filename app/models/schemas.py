@@ -128,6 +128,10 @@ class CacheInspectResponse(BaseModel):
     matches: List[CacheMatchItem]
 
 
+# Alias for backward compatibility with cache_admin endpoint
+CacheInspectItem = CacheMatchItem
+
+
 class TokenOpsSummaryResponse(BaseModel):
     """Executive financial & operational TokenOps dashboard summary."""
     total_requests: int

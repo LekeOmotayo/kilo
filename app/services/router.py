@@ -60,7 +60,7 @@ class ModelRouter:
         Estimate token count based on whitespace and subword heuristics.
         Standard heuristic: ~3.8-4 characters per token for English text and code.
         """
-        if not text:
+        if not text or not text.strip():
             return 0
         words = len(text.split())
         chars = len(text)
@@ -105,13 +105,17 @@ class ModelRouter:
         avg_word_length = sum(len(w) for w in words) / max(1, len(words))
         structural_score = min(1.0, (lexical_diversity * 0.6 + min(1.0, avg_word_length / 8.0) * 0.4))
 
-        # Composite weighted score
+        # Composite weighted score with dominant signal boost
         composite_score = (
             (code_score * 0.35) +
             (reasoning_score * 0.30) +
             (domain_score * 0.20) +
             (structural_score * 0.15)
         )
+        dominant_signal = max(code_score, reasoning_score)
+        if dominant_signal >= 0.9:
+            composite_score = max(composite_score, dominant_signal * 0.60 + domain_score * 0.25 + structural_score * 0.15)
+
         composite_score = round(min(1.0, max(0.0, composite_score)), 4)
 
         signals = {

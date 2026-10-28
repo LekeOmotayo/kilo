@@ -21,8 +21,8 @@ class JSONFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
-            "trace_id": trace_id_ctx.get() or getattr(record, "trace_id", ""),
-            "request_id": request_id_ctx.get() or getattr(record, "request_id", ""),
+            "trace_id": getattr(record, "trace_id", None) or trace_id_ctx.get() or "",
+            "request_id": getattr(record, "request_id", None) or request_id_ctx.get() or "",
         }
 
         # Include structured extra payload if present
