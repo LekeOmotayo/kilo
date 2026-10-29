@@ -1,7 +1,7 @@
 /* ==============================================================================
    TokenOps Gateway - Interactive Client Application Logic
    ============================================================================== */
-const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8090' : '';
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements

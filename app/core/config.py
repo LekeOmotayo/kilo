@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/v1"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8090
     LOG_LEVEL: str = "INFO"
 
     # Redis Vector Store & Semantic Caching
